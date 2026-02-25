@@ -33,6 +33,7 @@ const els = {
 
     // Modal
     articleModal: document.getElementById('articleModal'),
+    articleModalContent: document.getElementById('articleModalContent'),
     modalTitle: document.getElementById('modalTitle'),
     modalBody: document.getElementById('modalBody'),
     btnCloseModal: document.getElementById('btnCloseModal'),
@@ -112,6 +113,19 @@ function setupEventListeners() {
     // Modal
     els.btnCloseModal.addEventListener('click', closeModal);
     els.btnCopyArticle.addEventListener('click', copyArticle);
+
+    // Close modal on click outside
+    els.articleModal.addEventListener('click', (e) => {
+        if (e.target === els.articleModal) closeModal();
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !els.articleModal.classList.contains('hidden')) {
+            closeModal();
+            toggleSettings(false); // Also close settings if open
+        }
+    });
 
     // Fetch Now
     els.btnFetchNow.addEventListener('click', manualFetch);
