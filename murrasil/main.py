@@ -167,6 +167,9 @@ def update_settings(updates: Dict[str, str]):
     return {"status": "success"}
 
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
 # Create static directory if not exists
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -179,5 +182,9 @@ def read_index():
 
 if __name__ == "__main__":
     import uvicorn
-    from config import config
-    uvicorn.run("main:app", host=config.HOST, port=config.PORT, reload=True)
+    uvicorn.run(
+        "main:app",
+        host=os.getenv("HOST", "127.0.0.1"),
+        port=int(os.getenv("PORT", 8000)),
+        reload=False
+    )
