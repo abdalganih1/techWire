@@ -1,14 +1,12 @@
 import logging
-from openai import AsyncOpenAI
+import os
+import google.generativeai as genai
 from config import config
 
 logger = logging.getLogger(__name__)
 
-base_url = None if "gpt" in config.AI_MODEL.lower() else "http://localhost:11434/v1"
-client = AsyncOpenAI(
-    api_key=config.OPENAI_API_KEY or "ollama",
-    base_url=base_url 
-)
+genai.configure(api_key=config.GEMINI_API_KEY)
+model = genai.GenerativeModel("gemini-2.5-flash")
 
 async def generate_article(title_ar, summary_ar, source_name):
     prompt = f"""أنت صحفي تقني محترف. اكتب مقالاً إخبارياً قصيراً باللغة العربية الفصحى عن الخبر التالي.
@@ -24,11 +22,8 @@ async def generate_article(title_ar, summary_ar, source_name):
 المصدر: {source_name}"""
 
     try:
-        response = await client.chat.completions.create(
-            model=config.AI_MODEL,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.choices[0].message.content
+        response = model.generate_content(prompt)
+        return response.text
     except Exception as e:
         logger.error(f"Error generating article: {e}")
         return None

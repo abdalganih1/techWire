@@ -2,21 +2,17 @@ import feedparser
 import hashlib
 import json
 import logging
+import os
 from datetime import datetime, timezone
 
-from openai import AsyncOpenAI
+import google.generativeai as genai
 from config import config
 from database import get_db_connection
 
 logger = logging.getLogger(__name__)
 
-# Initialize OpenAI client 
-# If model has 'gpt', we use standard OpenAI, else assume Ollama structure
-base_url = None if "gpt" in config.AI_MODEL.lower() else "http://localhost:11434/v1"
-client = AsyncOpenAI(
-    api_key=config.OPENAI_API_KEY or "ollama",
-    base_url=base_url 
-)
+genai.configure(api_key=config.GEMINI_API_KEY)
+model = genai.GenerativeModel("gemini-2.5-flash", generation_config={"response_mime_type": "application/json"})
 
 async def generate_summary(title, content):
     prompt = f"""You are a tech journalist. Given this news article title and content in English,
@@ -31,12 +27,8 @@ Article content/description: {content}
 Return ONLY valid JSON, no explanation."""
     
     try:
-        response = await client.chat.completions.create(
-            model=config.AI_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            response_format={ "type": "json_object" }
-        )
-        result = json.loads(response.choices[0].message.content)
+        response = model.generate_content(prompt)
+        result = json.loads(response.text)
         return result
     except Exception as e:
         logger.error(f"Error generating summary: {e}")

@@ -28,7 +28,6 @@ const els = {
     btnAddSource: document.getElementById('btnAddSource'),
     inpSourceName: document.getElementById('inpSourceName'),
     inpSourceUrl: document.getElementById('inpSourceUrl'),
-    selAiModel: document.getElementById('selAiModel'),
     selInterval: document.getElementById('selInterval'),
     selMaxAge: document.getElementById('selMaxAge'),
 
@@ -316,8 +315,9 @@ async function manualFetch() {
         els.lastFetchTimestamp.textContent = "آخر تحديث: قبل لحظات";
         updateCounts();
         if (state.currentTab === 'new') loadNews();
+        showToast("اكتمل الجلب، ولكن لم تضف كل الأخبار الجديدة. ربما حدث خطأ في اتصال Gemini API.", true);
     } else {
-        showToast("خطأ أثناء جلب الأخبار", true);
+        showToast("⚠️ خطأ في الاتصال بـ Gemini API — تحقق من المفتاح في ملف .env", true);
     }
 }
 
@@ -344,7 +344,6 @@ function toggleSettings(show) {
 async function loadSettings() {
     const sets = await api('/api/settings');
     if (sets) {
-        if (sets.AI_MODEL) els.selAiModel.value = sets.AI_MODEL;
         if (sets.FETCH_INTERVAL_MINUTES) els.selInterval.value = sets.FETCH_INTERVAL_MINUTES;
         if (sets.MAX_NEWS_AGE_HOURS) els.selMaxAge.value = sets.MAX_NEWS_AGE_HOURS;
     }
@@ -352,7 +351,6 @@ async function loadSettings() {
 
 async function saveSettings() {
     const updates = {
-        "AI_MODEL": els.selAiModel.value,
         "FETCH_INTERVAL_MINUTES": els.selInterval.value,
         "MAX_NEWS_AGE_HOURS": els.selMaxAge.value
     };

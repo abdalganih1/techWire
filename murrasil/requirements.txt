@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 feedparser
-openai
+google-generativeai
 apscheduler
 python-dotenv
 aiohttp
