@@ -22,11 +22,17 @@ async def lifespan(app: FastAPI):
     start_scheduler()
     
     # Run an initial fetch in the background without blocking startup
-    asyncio.create_task(fetch_rss())
+    fetch_task = asyncio.create_task(fetch_rss())
     
     yield
     logger.info("Shutting down application...")
-    scheduler.shutdown()
+    scheduler.shutdown(wait=False)
+    if not fetch_task.done():
+        fetch_task.cancel()
+        try:
+            await fetch_task
+        except asyncio.CancelledError:
+            pass
 
 app = FastAPI(lifespan=lifespan)
 
@@ -149,7 +155,6 @@ def get_settings():
     conn.close()
     from config import config
     default_settings = {
-        "AI_MODEL": config.AI_MODEL,
         "FETCH_INTERVAL_MINUTES": str(config.FETCH_INTERVAL_MINUTES),
         "MAX_NEWS_AGE_HOURS": str(config.MAX_NEWS_AGE_HOURS)
     }
