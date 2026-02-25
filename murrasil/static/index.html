@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مُراسِل - الأخبار التقنية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#1e293b',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-cairo h-screen flex flex-col overflow-hidden">
+
+    <!-- Navbar -->
+    <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-4">
+            <h1 class="text-2xl font-bold text-primary flex items-center gap-2">
+                <i class="fa-solid fa-newspaper"></i> مُراسِل
+            </h1>
+            <span class="text-xs text-gray-400 mt-1" id="lastFetchTimestamp">جاري التحميل...</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <button id="btnFetchNow" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                <i class="fa-solid fa-rotate"></i> جلب الأخبار الآن
+            </button>
+            <button id="btnOpenSettings" class="text-gray-500 hover:text-gray-800 p-2 text-xl transition-colors">
+                <i class="fa-solid fa-gear"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="flex flex-1 overflow-hidden relative">
+        
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col w-full">
+            <!-- Tabs -->
+            <div class="bg-white border-b border-gray-200 px-6 flex gap-6 shrink-0 pt-2">
+                <button class="tab-btn active border-b-2 border-primary text-primary pb-3 px-2 font-semibold flex items-center gap-2" data-tab="new">
+                    <span>🆕 أخبار جديدة</span>
+                    <span class="bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full text-xs" id="badge-new">0</span>
+                </button>
+                <button class="tab-btn text-gray-500 hover:text-gray-800 border-b-2 border-transparent pb-3 px-2 font-semibold flex items-center gap-2" data-tab="approved">
+                    <span>✅ تمت الموافقة</span>
+                    <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs" id="badge-approved">0</span>
+                </button>
+                <button class="tab-btn text-gray-500 hover:text-gray-800 border-b-2 border-transparent pb-3 px-2 font-semibold flex items-center gap-2" data-tab="rejected">
+                    <span>❌ مرفوضة</span>
+                    <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs" id="badge-rejected">0</span>
+                </button>
+            </div>
+
+            <!-- Scrollable Content -->
+            <div class="flex-1 overflow-y-auto p-6 relative bg-gray-50/50" id="contentArea">
+                <!-- Data injected via JS -->
+                <div class="flex justify-center items-center h-full text-gray-400">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl"></i>
+                </div>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="bg-white border-t border-gray-200 p-4 flex justify-between items-center shrink-0">
+                <button id="btnPrevPage" class="px-4 py-2 border rounded hover:bg-gray-50 disabled:opacity-50 text-sm">السابق</button>
+                <span class="text-sm text-gray-500" id="pageIndicator">صفحة 1</span>
+                <button id="btnNextPage" class="px-4 py-2 border rounded hover:bg-gray-50 disabled:opacity-50 text-sm">التالي</button>
+            </div>
+        </main>
+
+        <!-- Settings Sidebar Overlay -->
+        <div id="settingsOverlay" class="fixed inset-0 bg-black/20 z-40 hidden transition-opacity"></div>
+        
+        <!-- Settings Sidebar -->
+        <aside id="settingsSidebar" class="fixed top-0 left-0 w-80 h-full bg-white shadow-2xl z-50 transform -translate-x-full transition-transform duration-300 flex flex-col">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
+                <h2 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-sliders"></i> الإعدادات</h2>
+                <button id="btnCloseSettings" class="text-gray-400 hover:text-red-500 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto flex-1 space-y-6">
+                <!-- AI Model -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-gray-700">نموذج الذكاء الاصطناعي</label>
+                    <select id="selAiModel" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none">
+                        <option value="gpt-4o-mini">GPT-4o-Mini</option>
+                        <option value="gpt-4o">GPT-4o</option>
+                        <option value="llama3">Ollama (llama3)</option>
+                    </select>
+                </div>
+
+                <!-- Fetch Interval -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-gray-700">معدل التحديث (دقيقة)</label>
+                    <select id="selInterval" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none">
+                        <option value="15">15 دقيقة</option>
+                        <option value="30">30 دقيقة</option>
+                        <option value="60">1 ساعة</option>
+                    </select>
+                </div>
+                
+                <!-- Max Age -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-gray-700">صلاحية الأخبار</label>
+                    <select id="selMaxAge" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none">
+                        <option value="24">24 ساعة</option>
+                        <option value="48">48 ساعة</option>
+                        <option value="168">أسبوع واحد</option>
+                    </select>
+                </div>
+
+                <hr class="border-gray-100">
+
+                <!-- Sources List -->
+                <div>
+                    <h3 class="text-sm font-semibold mb-3 text-gray-700">إدارة المصادر</h3>
+                    <div id="sourcesList" class="space-y-3 mb-4 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                        <!-- Injected -->
+                    </div>
+                    
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <p class="text-xs font-semibold mb-2 text-gray-600">إضافة مصدر جديد</p>
+                        <input type="text" id="inpSourceName" placeholder="اسم المصدر" class="w-full border rounded px-2 py-1.5 text-xs mb-2 outline-none focus:border-primary">
+                        <input type="url" id="inpSourceUrl" placeholder="رابط RSS" class="w-full border rounded px-2 py-1.5 text-xs mb-2 outline-none focus:border-primary" dir="ltr">
+                        <button id="btnAddSource" class="w-full bg-secondary text-white rounded py-1.5 text-xs font-semibold hover:bg-gray-700 transition">إضافة</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-4 border-t border-gray-100 shrink-0">
+                <button id="btnSaveSettings" class="w-full bg-primary text-white rounded-lg py-2.5 font-bold hover:bg-blue-600 shadow-md transition-colors flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات
+                </button>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Article Modal -->
+    <div id="articleModal" class="fixed inset-0 bg-black/50 z-50 flex justify-center items-center hidden transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-11/12 max-w-3xl max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-200" id="articleModalContent">
+            
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center shrink-0">
+                <h3 class="text-lg font-bold text-gray-800 line-clamp-1 pr-2" id="modalTitle">عنوان المقال</h3>
+                <button id="btnCloseModal" class="text-gray-400 hover:text-red-500 w-8 h-8 flex justify-center items-center rounded-full hover:bg-red-50 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto flex-1 font-serif text-lg leading-relaxed text-gray-700 custom-scrollbar whitespace-pre-line" id="modalBody">
+                <!-- Content -->
+            </div>
+            
+            <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3 rounded-b-xl shrink-0">
+                <button id="btnCopyArticle" class="bg-white border border-gray-300 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-50 flex items-center gap-2 transition-colors">
+                    <i class="fa-regular fa-copy"></i> نسخ المقال
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-gray-800 text-white px-5 py-3 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3">
+        <i class="fa-solid fa-circle-check text-green-400"></i>
+        <span id="toastMsg">تمت العملية بنجاح</span>
+    </div>
+
+</body>
+</html>
