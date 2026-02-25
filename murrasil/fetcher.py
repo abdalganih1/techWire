@@ -3,6 +3,7 @@ import hashlib
 import json
 import logging
 import os
+import asyncio
 from datetime import datetime, timezone
 
 import google.generativeai as genai
@@ -64,6 +65,8 @@ async def fetch_rss():
                 published_at = getattr(entry, 'published', now)
                 
                 ai_data = await generate_summary(title, content)
+                await asyncio.sleep(4)  # Rate Limit protection (Gemini Free: 15 RPM)
+                
                 if not ai_data:
                     continue
                 

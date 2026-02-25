@@ -36,7 +36,7 @@ echo [للإيقاف: اضغط Ctrl+C في هذه النافذة]
 echo.
 
 :: Open browser after 3 seconds delay (in background)
-start /b cmd /c "timeout /t 3 /nobreak >nul && start http://127.0.0.1:%PORT%"
+start /b cmd /c "timeout.exe /t 3 /nobreak >nul && start http://127.0.0.1:%PORT%"
 
 :: Start FastAPI server
 python main.py
