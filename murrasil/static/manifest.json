@@ -1,0 +1,27 @@
+{
+    "name": "مُراسِل — منصة الأخبار الذكية",
+    "short_name": "مُراسِل",
+    "description": "منصة أخبار ذكية متعددة المجالات مع تلخيص AI وتوصيات مخصصة",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0f172a",
+    "theme_color": "#3b82f6",
+    "orientation": "portrait-primary",
+    "lang": "ar",
+    "dir": "rtl",
+    "categories": ["news", "productivity"],
+    "icons": [
+        {
+            "src": "/static/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/static/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

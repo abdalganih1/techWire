@@ -4,203 +4,380 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مُراسِل - الأخبار التقنية</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>مُراسِل — منصة الأخبار الذكية</title>
+    <meta name="description" content="منصة أخبار ذكية متعددة المجالات مع تلخيص AI وكشف التكرار وتوصيات مخصصة">
+    <meta name="theme-color" content="#3b82f6">
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
     <link rel="stylesheet" href="/static/style.css">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        cairo: ['Cairo', 'sans-serif'],
-                    },
-                    colors: {
-                        primary: '#3b82f6',
-                        secondary: '#1e293b',
-                    }
-                }
-            }
-        }
-    </script>
 </head>
 
-<body class="bg-gray-50 text-gray-800 font-cairo h-screen flex flex-col overflow-hidden">
+<body data-theme="midnight">
 
-    <!-- Navbar -->
-    <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex justify-between items-center shrink-0">
-        <div class="flex items-center gap-4">
-            <h1 class="text-2xl font-bold text-primary flex items-center gap-2">
-                <i class="fa-solid fa-newspaper"></i> مُراسِل
-            </h1>
-            <span class="text-xs text-gray-400 mt-1" id="lastFetchTimestamp">جاري التحميل...</span>
+    <!-- ═══════════ TOP BAR ═══════════ -->
+    <header class="topbar" id="topbar">
+        <div class="topbar-right">
+            <div class="logo">
+                <i class="fa-solid fa-bolt-lightning"></i>
+                <span>مُراسِل</span>
+            </div>
+            <span class="timestamp" id="lastFetchTimestamp">جاري التحميل...</span>
         </div>
-        <div class="flex items-center gap-3">
-            <button id="btnFetchNow"
-                class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
-                <i class="fa-solid fa-rotate"></i> جلب الأخبار الآن
+
+        <div class="topbar-center">
+            <div class="search-box" id="searchBox">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="inpSearch" placeholder="ابحث في الأخبار..." autocomplete="off">
+                <button class="search-clear hidden" id="btnClearSearch" title="مسح">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <button class="search-ai" id="btnAiSearch" title="بحث ذكي بالذكاء الاصطناعي">
+                    <i class="fa-solid fa-brain"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="topbar-left">
+            <button class="topbar-btn" id="btnFetchNow" title="جلب الأخبار الآن">
+                <i class="fa-solid fa-rotate"></i>
             </button>
-            <button id="btnOpenSettings" class="text-gray-500 hover:text-gray-800 p-2 text-xl transition-colors">
+            <button class="topbar-btn" id="btnToggleLog" title="سجل الجلب">
+                <i class="fa-solid fa-terminal"></i>
+            </button>
+            <button class="topbar-btn danger" id="btnClearOld" title="حذف الأخبار القديمة (أكثر من 24 ساعة)">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+            </button>
+            <button class="topbar-btn danger" id="btnClearAll" title="حذف كل الأخبار">
+                <i class="fa-solid fa-trash-can"></i>
+            </button>
+            <button class="topbar-btn notif-btn" id="btnNotifications" title="الإشعارات">
+                <i class="fa-solid fa-bell"></i>
+                <span class="notif-badge hidden" id="notifBadge">0</span>
+            </button>
+            <button class="topbar-btn" id="btnTheme" title="تغيير المظهر">
+                <i class="fa-solid fa-palette"></i>
+            </button>
+            <button class="topbar-btn" id="btnOpenSettings" title="الإعدادات">
                 <i class="fa-solid fa-gear"></i>
             </button>
         </div>
     </header>
 
-    <!-- Main Workspace -->
-    <div class="flex flex-1 overflow-hidden relative">
+    <!-- ═══════════ THEME PICKER POPUP ═══════════ -->
+    <div class="theme-picker hidden" id="themePicker">
+        <div class="theme-picker-title">اختر المظهر</div>
+        <div class="theme-options">
+            <button class="theme-option active" data-theme="midnight" title="منتصف الليل">
+                <div class="theme-preview" style="background: linear-gradient(135deg, #0f172a, #1e293b)"></div>
+                <span>منتصف الليل</span>
+            </button>
+            <button class="theme-option" data-theme="dawn" title="الفجر">
+                <div class="theme-preview" style="background: linear-gradient(135deg, #fdf2f8, #fce7f3)"></div>
+                <span>الفجر</span>
+            </button>
+            <button class="theme-option" data-theme="ocean" title="المحيط">
+                <div class="theme-preview" style="background: linear-gradient(135deg, #0c4a6e, #164e63)"></div>
+                <span>المحيط</span>
+            </button>
+            <button class="theme-option" data-theme="forest" title="الغابة">
+                <div class="theme-preview" style="background: linear-gradient(135deg, #14532d, #1a2e05)"></div>
+                <span>الغابة</span>
+            </button>
+            <button class="theme-option" data-theme="clean" title="نظيف">
+                <div class="theme-preview" style="background: linear-gradient(135deg, #ffffff, #f1f5f9)"></div>
+                <span>نظيف</span>
+            </button>
+        </div>
+    </div>
 
-        <!-- Main Content -->
-        <main class="flex-1 flex flex-col w-full">
-            <!-- Tabs -->
-            <div class="bg-white border-b border-gray-200 px-6 flex gap-6 shrink-0 pt-2">
-                <button
-                    class="tab-btn active border-b-2 border-primary text-primary pb-3 px-2 font-semibold flex items-center gap-2"
-                    data-tab="new">
-                    <span>🆕 أخبار جديدة</span>
-                    <span class="bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full text-xs" id="badge-new">0</span>
+    <!-- ═══════════ MAIN LAYOUT ═══════════ -->
+    <div class="app-layout">
+
+        <!-- ─── Stats Bar ─── -->
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-card">
+                <i class="fa-solid fa-newspaper"></i>
+                <div class="stat-info">
+                    <span class="stat-value" id="statTotal">0</span>
+                    <span class="stat-label">إجمالي الأخبار</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="fa-solid fa-globe"></i>
+                <div class="stat-info">
+                    <span class="stat-value" id="statSources">0</span>
+                    <span class="stat-label">مصدر نشط</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="fa-solid fa-layer-group"></i>
+                <div class="stat-info">
+                    <span class="stat-value" id="statClusters">0</span>
+                    <span class="stat-label">قصة مدمجة</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ─── Tabs ─── -->
+        <div class="tabs-bar">
+            <div class="tabs-scroll">
+                <button class="tab active" data-tab="new">
+                    <i class="fa-solid fa-sparkles"></i>
+                    <span>جديدة</span>
+                    <span class="tab-badge" id="badge-new">0</span>
                 </button>
-                <button
-                    class="tab-btn text-gray-500 hover:text-gray-800 border-b-2 border-transparent pb-3 px-2 font-semibold flex items-center gap-2"
-                    data-tab="approved">
-                    <span>✅ تمت الموافقة</span>
-                    <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs"
-                        id="badge-approved">0</span>
+                <button class="tab" data-tab="approved">
+                    <i class="fa-solid fa-check-double"></i>
+                    <span>معتمدة</span>
+                    <span class="tab-badge green" id="badge-approved">0</span>
                 </button>
-                <button
-                    class="tab-btn text-gray-500 hover:text-gray-800 border-b-2 border-transparent pb-3 px-2 font-semibold flex items-center gap-2"
-                    data-tab="rejected">
-                    <span>❌ مرفوضة</span>
-                    <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs" id="badge-rejected">0</span>
+                <button class="tab" data-tab="rejected">
+                    <i class="fa-solid fa-ban"></i>
+                    <span>مرفوضة</span>
+                    <span class="tab-badge red" id="badge-rejected">0</span>
                 </button>
             </div>
+        </div>
 
-            <!-- Scrollable Content -->
-            <div class="flex-1 overflow-y-auto p-6 relative bg-gray-50/50" id="contentArea">
-                <!-- Data injected via JS -->
-                <div class="flex justify-center items-center h-full text-gray-400">
-                    <i class="fa-solid fa-spinner fa-spin text-3xl"></i>
+        <!-- ─── Fetch Progress Log ─── -->
+        <div class="fetch-progress hidden" id="fetchProgress">
+            <div class="progress-header">
+                <div class="progress-header-right">
+                    <div class="progress-spinner"></div>
+                    <span class="progress-title" id="progressTitle">جاري الجلب...</span>
+                </div>
+                <button class="progress-close" id="btnCloseProgress" title="إغلاق">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="progress-log" id="progressLog">
+                <!-- Progress messages injected here -->
+            </div>
+        </div>
+
+        <!-- ─── Filter Bar ─── -->
+        <div class="filter-bar" id="filterBar">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label><i class="fa-solid fa-arrow-down-wide-short"></i> الترتيب</label>
+                    <select id="selSort" class="filter-select">
+                        <option value="smart">🤖 ذكي (موصى)</option>
+                        <option value="desc">📅 الأحدث أولاً</option>
+                        <option value="asc">📅 الأقدم أولاً</option>
+                    </select>
                 </div>
             </div>
 
-            <!-- Pagination -->
-            <div class="bg-white border-t border-gray-200 p-4 flex justify-between items-center shrink-0">
-                <button id="btnPrevPage"
-                    class="px-4 py-2 border rounded hover:bg-gray-50 disabled:opacity-50 text-sm">السابق</button>
-                <span class="text-sm text-gray-500" id="pageIndicator">صفحة 1</span>
-                <button id="btnNextPage"
-                    class="px-4 py-2 border rounded hover:bg-gray-50 disabled:opacity-50 text-sm">التالي</button>
+            <div class="filter-row">
+                <div class="category-chips" id="categoriesBar">
+                    <button data-cat="" class="chip active">الكل</button>
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="category-chips" id="sourcesBar">
+                    <button data-src="" class="chip active">كل المصادر</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ─── Content Area ─── -->
+        <main class="content-area" id="contentArea">
+            <div class="loading-state">
+                <div class="loader"></div>
+                <p>جاري تحميل الأخبار...</p>
             </div>
         </main>
 
-        <!-- Settings Sidebar Overlay -->
-        <div id="settingsOverlay" class="fixed inset-0 bg-black/20 z-40 hidden transition-opacity"></div>
-
-        <!-- Settings Sidebar -->
-        <aside id="settingsSidebar"
-            class="fixed top-0 left-0 w-80 h-full bg-white shadow-2xl z-50 transform -translate-x-full transition-transform duration-300 flex flex-col">
-            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
-                <h2 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-sliders"></i> الإعدادات</h2>
-                <button id="btnCloseSettings" class="text-gray-400 hover:text-red-500 transition-colors">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
-            </div>
-
-            <div class="p-6 overflow-y-auto flex-1 space-y-6">
-                <!-- AI Model -->
-                <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-700">نموذج الذكاء الاصطناعي</label>
-                    <div
-                        class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 cursor-not-allowed">
-                        النموذج المستخدم: Gemini 2.5 Flash (مجاني)
-                    </div>
-                </div>
-
-                <!-- Fetch Interval -->
-                <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-700">معدل التحديث (دقيقة)</label>
-                    <select id="selInterval"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none">
-                        <option value="15">15 دقيقة</option>
-                        <option value="30">30 دقيقة</option>
-                        <option value="60">1 ساعة</option>
-                    </select>
-                </div>
-
-                <!-- Max Age -->
-                <div>
-                    <label class="block text-sm font-semibold mb-2 text-gray-700">صلاحية الأخبار</label>
-                    <select id="selMaxAge"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none">
-                        <option value="24">24 ساعة</option>
-                        <option value="48">48 ساعة</option>
-                        <option value="168">أسبوع واحد</option>
-                    </select>
-                </div>
-
-                <hr class="border-gray-100">
-
-                <!-- Sources List -->
-                <div>
-                    <h3 class="text-sm font-semibold mb-3 text-gray-700">إدارة المصادر</h3>
-                    <div id="sourcesList" class="space-y-3 mb-4 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                        <!-- Injected -->
-                    </div>
-
-                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                        <p class="text-xs font-semibold mb-2 text-gray-600">إضافة مصدر جديد</p>
-                        <input type="text" id="inpSourceName" placeholder="اسم المصدر"
-                            class="w-full border rounded px-2 py-1.5 text-xs mb-2 outline-none focus:border-primary">
-                        <input type="url" id="inpSourceUrl" placeholder="رابط RSS"
-                            class="w-full border rounded px-2 py-1.5 text-xs mb-2 outline-none focus:border-primary"
-                            dir="ltr">
-                        <button id="btnAddSource"
-                            class="w-full bg-secondary text-white rounded py-1.5 text-xs font-semibold hover:bg-gray-700 transition">إضافة</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="p-4 border-t border-gray-100 shrink-0">
-                <button id="btnSaveSettings"
-                    class="w-full bg-primary text-white rounded-lg py-2.5 font-bold hover:bg-blue-600 shadow-md transition-colors flex justify-center items-center gap-2">
-                    <i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات
-                </button>
-            </div>
-        </aside>
+        <!-- ─── Pagination ─── -->
+        <div class="pagination" id="pagination">
+            <button class="page-btn" id="btnPrevPage" disabled>
+                <i class="fa-solid fa-chevron-right"></i> السابق
+            </button>
+            <span class="page-info" id="pageIndicator">صفحة 1</span>
+            <button class="page-btn" id="btnNextPage">
+                التالي <i class="fa-solid fa-chevron-left"></i>
+            </button>
+        </div>
     </div>
 
-    <!-- Article Modal -->
-    <div id="articleModal"
-        class="fixed inset-0 bg-black/50 z-50 flex justify-center items-center hidden transition-opacity">
-        <div class="bg-white rounded-xl shadow-2xl w-11/12 max-w-3xl max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-200"
-            id="articleModalContent">
+    <!-- ═══════════ TTS PLAYER BAR ═══════════ -->
+    <div class="tts-bar hidden" id="ttsBar">
+        <div class="tts-info">
+            <i class="fa-solid fa-headphones"></i>
+            <span class="tts-title" id="ttsTitle">جاري الاستماع...</span>
+        </div>
+        <div class="tts-controls">
+            <button class="tts-btn" id="ttsPlayPause" title="تشغيل/إيقاف">
+                <i class="fa-solid fa-pause"></i>
+            </button>
+            <select class="tts-speed" id="ttsSpeed" title="السرعة">
+                <option value="0.75">0.75x</option>
+                <option value="1" selected>1x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+            </select>
+            <button class="tts-btn" id="ttsStop" title="إيقاف">
+                <i class="fa-solid fa-stop"></i>
+            </button>
+        </div>
+    </div>
 
-            <div class="p-5 border-b border-gray-100 flex justify-between items-center shrink-0">
-                <h3 class="text-lg font-bold text-gray-800 line-clamp-1 pr-2" id="modalTitle">عنوان المقال</h3>
-                <button id="btnCloseModal"
-                    class="text-gray-400 hover:text-red-500 w-8 h-8 flex justify-center items-center rounded-full hover:bg-red-50 transition-colors">
-                    <i class="fa-solid fa-xmark text-xl"></i>
+    <!-- ═══════════ NOTIFICATIONS PANEL ═══════════ -->
+    <div class="overlay hidden" id="notifOverlay"></div>
+    <aside class="side-panel notif-panel hidden" id="notifPanel">
+        <div class="panel-header">
+            <h2><i class="fa-solid fa-bell"></i> الإشعارات</h2>
+            <div class="panel-header-actions">
+                <button class="panel-action" id="btnMarkAllRead" title="قراءة الكل">
+                    <i class="fa-solid fa-check-double"></i>
+                </button>
+                <button class="panel-close" id="btnCloseNotif">
+                    <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
+        </div>
+        <div class="panel-body" id="notifList">
+            <!-- Notifications injected here -->
+        </div>
+    </aside>
 
-            <div class="p-6 overflow-y-auto flex-1 font-serif text-lg leading-relaxed text-gray-700 custom-scrollbar whitespace-pre-line"
-                id="modalBody">
-                <!-- Content -->
+    <!-- ═══════════ SETTINGS PANEL ═══════════ -->
+    <div class="overlay hidden" id="settingsOverlay"></div>
+    <aside class="side-panel settings-panel hidden" id="settingsPanel">
+        <div class="panel-header">
+            <h2><i class="fa-solid fa-sliders"></i> الإعدادات</h2>
+            <button class="panel-close" id="btnCloseSettings">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="panel-body">
+            <!-- AI Model -->
+            <div class="setting-group">
+                <label>نموذج الذكاء الاصطناعي</label>
+                <div class="setting-static">Gemini 2.5 Flash (حساب مدفوع)</div>
             </div>
 
-            <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3 rounded-b-xl shrink-0">
-                <button id="btnCopyArticle"
-                    class="bg-white border border-gray-300 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-50 flex items-center gap-2 transition-colors">
-                    <i class="fa-regular fa-copy"></i> نسخ المقال
+            <!-- Fetch Interval -->
+            <div class="setting-group">
+                <label>معدل التحديث</label>
+                <select id="selInterval" class="setting-select">
+                    <option value="5">5 دقائق</option>
+                    <option value="10">10 دقائق</option>
+                    <option value="15" selected>15 دقيقة</option>
+                    <option value="30">30 دقيقة</option>
+                    <option value="60">ساعة واحدة</option>
+                </select>
+            </div>
+
+            <!-- Max Age -->
+            <div class="setting-group">
+                <label>صلاحية الأخبار</label>
+                <select id="selMaxAge" class="setting-select">
+                    <option value="24">24 ساعة</option>
+                    <option value="48">48 ساعة</option>
+                    <option value="72">3 أيام</option>
+                    <option value="168" selected>أسبوع</option>
+                </select>
+            </div>
+
+            <hr class="setting-divider">
+
+            <!-- Preferences -->
+            <div class="setting-group">
+                <label>تفضيلات الأقسام والإشعارات</label>
+                <div class="prefs-list" id="prefsList">
+                    <!-- Injected dynamically -->
+                </div>
+            </div>
+
+            <hr class="setting-divider">
+
+            <!-- Sources -->
+            <div class="setting-group">
+                <label>إدارة المصادر</label>
+                <div class="sources-list" id="sourcesList">
+                    <!-- Injected dynamically -->
+                </div>
+
+                <div class="add-source-form">
+                    <input type="text" id="inpSourceName" placeholder="اسم المصدر" class="setting-input">
+                    <input type="url" id="inpSourceUrl" placeholder="رابط RSS" class="setting-input" dir="ltr">
+                    <select id="inpSourceLang" class="setting-select">
+                        <option value="en">English</option>
+                        <option value="ar">عربي</option>
+                    </select>
+                    <button class="btn-add-source" id="btnAddSource">
+                        <i class="fa-solid fa-plus"></i> إضافة مصدر
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-footer">
+            <button class="btn-save" id="btnSaveSettings">
+                <i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات
+            </button>
+        </div>
+    </aside>
+
+    <!-- ═══════════ ARTICLE MODAL ═══════════ -->
+    <div class="modal-overlay hidden" id="articleModal">
+        <div class="modal" id="articleModalContent">
+            <div class="modal-header">
+                <h3 id="modalTitle">عنوان المقال</h3>
+                <button class="modal-close" id="btnCloseModal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Content -->
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn" id="btnListenArticle">
+                    <i class="fa-solid fa-headphones"></i> استماع
+                </button>
+                <button class="modal-btn" id="btnCopyArticle">
+                    <i class="fa-regular fa-copy"></i> نسخ
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Toast Notification -->
-    <div id="toast"
-        class="fixed bottom-6 right-6 bg-gray-800 text-white px-5 py-3 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3">
-        <i class="fa-solid fa-circle-check text-green-400"></i>
+    <!-- ═══════════ CLUSTER MODAL ═══════════ -->
+    <div class="modal-overlay hidden" id="clusterModal">
+        <div class="modal" id="clusterModalContent">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-layer-group"></i> قصة من مصادر متعددة</h3>
+                <button class="modal-close" id="btnCloseCluster">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="clusterBody">
+                <!-- Cluster articles -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ OFFLINE BANNER ═══════════ -->
+    <div class="offline-banner hidden" id="offlineBanner">
+        <i class="fa-solid fa-wifi-slash"></i>
+        <span>أنت في وضع Offline — تعرض الأخبار المحفوظة</span>
+    </div>
+
+    <!-- ═══════════ TOAST ═══════════ -->
+    <div class="toast hidden" id="toast">
+        <i class="fa-solid fa-circle-check"></i>
         <span id="toastMsg">تمت العملية بنجاح</span>
     </div>
 
