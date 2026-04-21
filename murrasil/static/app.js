@@ -13,9 +13,11 @@ const state = {
     sortOrder: 'smart',
     aiSearch: false,
     theme: localStorage.getItem('murrasil-theme') || 'midnight',
+    displayLang: localStorage.getItem('murrasil-lang') || 'ar',
     tts: { speaking: false, currentId: null },
-    _cachedNews: null,  // client-side cache for instant filtering
+    _cachedNews: null,
     _cacheTab: null,
+    _translationObserver: null,
 };
 
 function escapeHtml(str) {
@@ -40,6 +42,7 @@ const els = {
     notifBadge: $('#notifBadge'),
     btnTheme: $('#btnTheme'),
     btnOpenSettings: $('#btnOpenSettings'),
+    langSwitcher: $('#langSwitcher'),
 
     // Theme
     themePicker: $('#themePicker'),
@@ -130,7 +133,9 @@ const els = {
 // ══════════════════════════════════════
 async function init() {
     applyTheme(state.theme);
+    applyLanguage(state.displayLang);
     setupEventListeners();
+    setupLanguageSwitcher();
     await Promise.all([
         updateCounts(),
         loadNews(),
@@ -436,7 +441,7 @@ async function loadNews(useCache = false) {
     els.contentArea.innerHTML = '<div class="loading-state"><div class="loader"></div><p>جاري تحميل الأخبار...</p></div>';
 
     // Fetch ALL for this tab (cache-friendly)
-    let url = `/api/news?status=${state.currentTab}&page=1&limit=500&sort=${state.sortOrder}`;
+    let url = `/api/news?status=${state.currentTab}&page=1&limit=100&sort=${state.sortOrder}&lang=${state.displayLang}`;
     if (state.searchQuery) url += `&q=${encodeURIComponent(state.searchQuery)}&ai_search=${state.aiSearch}`;
 
     const data = await api(url);
@@ -480,6 +485,7 @@ function renderFromCache() {
         const cards = paged.map((item, i) => renderCard(item, i)).join('');
         els.contentArea.innerHTML = `<div class="news-grid">${cards}</div>`;
         attachCardListeners();
+        setupLazyTranslation();
     }
 
     const hasMore = (state.page * state.limit) < total;
@@ -494,10 +500,13 @@ function renderCard(item, index) {
     const catClass = item.category || 'منوعات';
     const clusterSize = item.cluster_size || 1;
     const delay = Math.min(index * 0.05, 0.5);
+    const displayTitle = item.title_display || item.title_ar || '';
+    const displaySummary = item.summary_display || item.summary_ar || '';
+    const needsTranslation = item.needs_translation ? 'data-needs-translation="true"' : '';
 
     let imageHtml = '';
     if (item.image_url) {
-        imageHtml = `<img class="card-image" src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.title_ar)}" loading="lazy" onerror="this.outerHTML='<div class=card-image-placeholder></div>'">`;
+        imageHtml = `<img class="card-image" src="${escapeHtml(item.image_url)}" alt="${escapeHtml(displayTitle)}" loading="lazy" onerror="this.outerHTML='<div class=card-image-placeholder></div>'">`;
     } else {
         imageHtml = '<div class="card-image-placeholder"></div>';
     }
@@ -543,7 +552,7 @@ function renderCard(item, index) {
     }
 
     return `
-        <article class="news-card" id="card-${escapeHtml(item.id)}" style="animation-delay: ${delay}s">
+        <article class="news-card" id="card-${escapeHtml(item.id)}" style="animation-delay: ${delay}s" ${needsTranslation}>
             ${imageHtml}
             <div class="card-body">
                 <div class="card-meta">
@@ -554,9 +563,9 @@ function renderCard(item, index) {
                     <span class="time-tag">${timeAgo}</span>
                 </div>
                 <h3 class="card-title">
-                    <a href="${escapeHtml(item.original_url || '#')}" target="_blank" rel="noopener">${escapeHtml(item.title_ar) || ''}</a>
+                    <a href="${escapeHtml(item.original_url || '#')}" target="_blank" rel="noopener">${escapeHtml(displayTitle) || ''}</a>
                 </h3>
-                <p class="card-summary">${escapeHtml(item.summary_ar || item.article_ar) || ''}</p>
+                <p class="card-summary">${escapeHtml(displaySummary) || ''}</p>
                 <div class="card-meta" style="margin-top:auto; padding-top:8px;">
                     <span class="source-tag"><i class="fa-solid fa-globe"></i> ${escapeHtml(item.source_name) || ''}</span>
                 </div>
@@ -620,8 +629,8 @@ function attachCardListeners() {
     $$('.card-btn.view').forEach(btn => {
         btn.addEventListener('click', async () => {
             const id = btn.dataset.id;
-            const res = await api(`/api/news/${id}`);
-            if (res) openArticleModal(res.title_ar, res.article_ar || res.summary_ar);
+            const res = await api(`/api/news/${id}?lang=${state.displayLang}`);
+            if (res) openArticleModal(res.title_display || res.title_ar, res.article_display || res.article_ar || res.summary_display || res.summary_ar);
         });
     });
 
@@ -1145,6 +1154,88 @@ async function registerServiceWorker() {
             console.log('SW registered:', reg.scope);
         } catch (e) {
             console.warn('SW registration failed:', e);
+        }
+    }
+}
+
+
+// ══════════════════════════════════════
+// LANGUAGE SWITCHER
+// ══════════════════════════════════════
+function applyLanguage(lang) {
+    state.displayLang = lang;
+    localStorage.setItem('murrasil-lang', lang);
+    const isRtl = lang === 'ar';
+    document.documentElement.setAttribute('dir', isRtl ? 'rtl' : 'ltr');
+    document.documentElement.setAttribute('lang', lang);
+    document.body.classList.toggle('dir-ltr', !isRtl);
+    $$('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === lang);
+    });
+}
+
+function setupLanguageSwitcher() {
+    $$('.lang-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const lang = btn.dataset.lang;
+            if (lang === state.displayLang) return;
+            applyLanguage(lang);
+            api('/api/settings/language', 'POST', { lang });
+            state._cachedNews = null;
+            state._cacheTab = null;
+            loadNews();
+        });
+    });
+}
+
+function setupLazyTranslation() {
+    if (state._translationObserver) {
+        state._translationObserver.disconnect();
+    }
+
+    if (state.displayLang === 'ar') return;
+
+    const cards = $$('[data-needs-translation="true"]');
+    if (cards.length === 0) return;
+
+    const idsToTranslate = [];
+
+    state._translationObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const card = entry.target;
+                const id = card.id.replace('card-', '');
+                if (id && !idsToTranslate.includes(id)) {
+                    idsToTranslate.push(id);
+                }
+                state._translationObserver.unobserve(card);
+            }
+        });
+
+        if (idsToTranslate.length > 0) {
+            const batch = idsToTranslate.splice(0, 10);
+            translateLazyBatch(batch);
+        }
+    }, { rootMargin: '200px' });
+
+    cards.forEach(card => state._translationObserver.observe(card));
+}
+
+async function translateLazyBatch(ids) {
+    if (!ids.length || state.displayLang === 'ar') return;
+    const res = await api('/api/translate/bulk', 'POST', { news_ids: ids, lang: state.displayLang });
+    if (!res || !res.translations) return;
+
+    for (const t of res.translations) {
+        if (t.is_translated) {
+            const card = $(`#card-${t.news_id}`);
+            if (card) {
+                const titleEl = card.querySelector('.card-title a');
+                const summaryEl = card.querySelector('.card-summary');
+                if (titleEl) titleEl.textContent = t.title || '';
+                if (summaryEl) summaryEl.textContent = t.summary || '';
+                card.removeAttribute('data-needs-translation');
+            }
         }
     }
 }

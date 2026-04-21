@@ -22,7 +22,7 @@ def init_db():
     # ══════════════════════════════════════
     # جدول الأخبار (محدّث)
     # ══════════════════════════════════════
-    cursor.execute('''
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS news (
             id TEXT PRIMARY KEY,
             title_ar TEXT,
@@ -42,28 +42,32 @@ def init_db():
             image_url TEXT,
             keywords TEXT
         )
-    ''')
+    """)
 
     # فهارس
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_news_status ON news(status)')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_news_category ON news(category)')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_news_published_at ON news(published_at DESC)')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_news_cluster ON news(cluster_id)')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_news_sim_hash ON news(similarity_hash)')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_news_source ON news(source_name)')
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_news_status ON news(status)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_news_category ON news(category)")
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_news_published_at ON news(published_at DESC)"
+    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_news_cluster ON news(cluster_id)")
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_news_sim_hash ON news(similarity_hash)"
+    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_news_source ON news(source_name)")
 
     # ترقية الجدول إذا كان قديماً — إضافة أعمدة جديدة
-    _safe_add_column(cursor, 'news', 'cluster_id', 'TEXT')
-    _safe_add_column(cursor, 'news', 'original_lang', "TEXT DEFAULT 'en'")
-    _safe_add_column(cursor, 'news', 'similarity_hash', 'TEXT')
-    _safe_add_column(cursor, 'news', 'read_count', 'INTEGER DEFAULT 0')
-    _safe_add_column(cursor, 'news', 'image_url', 'TEXT')
-    _safe_add_column(cursor, 'news', 'keywords', 'TEXT')
+    _safe_add_column(cursor, "news", "cluster_id", "TEXT")
+    _safe_add_column(cursor, "news", "original_lang", "TEXT DEFAULT 'en'")
+    _safe_add_column(cursor, "news", "similarity_hash", "TEXT")
+    _safe_add_column(cursor, "news", "read_count", "INTEGER DEFAULT 0")
+    _safe_add_column(cursor, "news", "image_url", "TEXT")
+    _safe_add_column(cursor, "news", "keywords", "TEXT")
 
     # ══════════════════════════════════════
     # جدول المصادر
     # ══════════════════════════════════════
-    cursor.execute('''
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS sources (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT,
@@ -72,49 +76,51 @@ def init_db():
             lang TEXT DEFAULT 'en',
             enabled INTEGER DEFAULT 1
         )
-    ''')
-    _safe_add_column(cursor, 'sources', 'category_hint', 'TEXT')
-    _safe_add_column(cursor, 'sources', 'lang', "TEXT DEFAULT 'en'")
+    """)
+    _safe_add_column(cursor, "sources", "category_hint", "TEXT")
+    _safe_add_column(cursor, "sources", "lang", "TEXT DEFAULT 'en'")
 
     # ══════════════════════════════════════
     # جدول الإعدادات
     # ══════════════════════════════════════
-    cursor.execute('''
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
             value TEXT
         )
-    ''')
+    """)
 
     # ══════════════════════════════════════
     # جدول تفضيلات المستخدم
     # ══════════════════════════════════════
-    cursor.execute('''
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS user_preferences (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             category TEXT UNIQUE,
             weight REAL DEFAULT 1.0,
             notify INTEGER DEFAULT 0
         )
-    ''')
+    """)
 
     # ══════════════════════════════════════
     # جدول تجميعات القصص (Clusters)
     # ══════════════════════════════════════
-    cursor.execute('''
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS news_clusters (
             cluster_id TEXT,
             news_id TEXT,
             similarity_score REAL,
             FOREIGN KEY (news_id) REFERENCES news(id) ON DELETE CASCADE
         )
-    ''')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_clusters_cid ON news_clusters(cluster_id)')
+    """)
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_clusters_cid ON news_clusters(cluster_id)"
+    )
 
     # ══════════════════════════════════════
     # جدول التفاعلات (للتوصيات)
     # ══════════════════════════════════════
-    cursor.execute('''
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS interactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             news_id TEXT,
@@ -123,13 +129,15 @@ def init_db():
             dwell_time INTEGER DEFAULT 0,
             FOREIGN KEY (news_id) REFERENCES news(id) ON DELETE CASCADE
         )
-    ''')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_interactions_action ON interactions(action)')
+    """)
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_interactions_action ON interactions(action)"
+    )
 
     # ══════════════════════════════════════
     # جدول الإشعارات
     # ══════════════════════════════════════
-    cursor.execute('''
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS notifications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT,
@@ -139,55 +147,80 @@ def init_db():
             read INTEGER DEFAULT 0,
             created_at TEXT
         )
-    ''')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_notif_read ON notifications(read)')
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_notif_read ON notifications(read)")
+
+    # ══════════════════════════════════════
+    # جدول الترجمات
+    # ══════════════════════════════════════
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS translations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            news_id TEXT NOT NULL,
+            lang TEXT NOT NULL,
+            title TEXT NOT NULL,
+            summary TEXT,
+            article TEXT,
+            translated_at TEXT,
+            model_used TEXT,
+            UNIQUE(news_id, lang),
+            FOREIGN KEY (news_id) REFERENCES news(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_trans_news_lang ON translations(news_id, lang)"
+    )
 
     # ══════════════════════════════════════
     # المصادر الافتراضية
     # ══════════════════════════════════════
-    cursor.execute('SELECT COUNT(*) FROM sources')
+    cursor.execute("SELECT COUNT(*) FROM sources")
     if cursor.fetchone()[0] == 0:
         default_sources = [
             # ── تكنولوجيا ──
             ("TechCrunch", "https://techcrunch.com/feed/", "تكنولوجيا", "en"),
             ("The Verge", "https://www.theverge.com/rss/index.xml", "تكنولوجيا", "en"),
-            ("VentureBeat AI", "https://venturebeat.com/category/ai/feed/", "تكنولوجيا", "en"),
-            ("Wired AI", "https://www.wired.com/feed/tag/ai/latest/rss", "تكنولوجيا", "en"),
+            (
+                "VentureBeat AI",
+                "https://venturebeat.com/category/ai/feed/",
+                "تكنولوجيا",
+                "en",
+            ),
+            (
+                "Wired AI",
+                "https://www.wired.com/feed/tag/ai/latest/rss",
+                "تكنولوجيا",
+                "en",
+            ),
             ("THE DECODER", "https://the-decoder.com/feed/", "تكنولوجيا", "en"),
             ("Hacker News", "https://news.ycombinator.com/rss", "تكنولوجيا", "en"),
-
             # ── أخبار عامة ──
             ("BBC News", "https://feeds.bbci.co.uk/news/rss.xml", "منوعات", "en"),
-
             # ── صحة ──
             ("Medical News Today", "https://www.medicalnewstoday.com/rss", "صحة", "en"),
-
             # ── موضة وجمال ──
             ("Vogue", "https://www.vogue.com/feed/rss", "موضة وجمال", "en"),
             ("Elle", "https://www.elle.com/rss/all.xml/", "موضة وجمال", "en"),
-
             # ── رياضة ──
             ("ESPN", "https://www.espn.com/espn/rss/news", "رياضة", "en"),
             ("Sky Sports", "https://www.skysports.com/rss/12040", "رياضة", "en"),
-
             # ── فن وترفيه ──
             ("Variety", "https://variety.com/feed/", "فن وترفيه", "en"),
             ("BuzzFeed", "https://www.buzzfeed.com/index.xml", "منوعات", "en"),
-
             # ── مصادر عربية ──
             ("الجزيرة نت", "https://www.aljazeera.net/aljazeera/rss", "منوعات", "ar"),
             ("العربية", "https://www.alarabiya.net/.mrss/ar.xml", "منوعات", "ar"),
             ("RT عربي", "https://arabic.rt.com/rss/", "منوعات", "ar"),
         ]
         cursor.executemany(
-            'INSERT INTO sources (name, url, category_hint, lang) VALUES (?, ?, ?, ?)',
-            default_sources
+            "INSERT INTO sources (name, url, category_hint, lang) VALUES (?, ?, ?, ?)",
+            default_sources,
         )
 
     # ══════════════════════════════════════
     # تفضيلات افتراضية
     # ══════════════════════════════════════
-    cursor.execute('SELECT COUNT(*) FROM user_preferences')
+    cursor.execute("SELECT COUNT(*) FROM user_preferences")
     if cursor.fetchone()[0] == 0:
         default_prefs = [
             ("تكنولوجيا", 1.5, 1),
@@ -202,8 +235,8 @@ def init_db():
             ("عاجل", 2.0, 1),
         ]
         cursor.executemany(
-            'INSERT INTO user_preferences (category, weight, notify) VALUES (?, ?, ?)',
-            default_prefs
+            "INSERT INTO user_preferences (category, weight, notify) VALUES (?, ?, ?)",
+            default_prefs,
         )
 
     conn.commit()
@@ -217,7 +250,3 @@ def _safe_add_column(cursor, table, column, col_type):
         cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
     except sqlite3.OperationalError:
         pass  # Column already exists
-
-
-# Initialize on import
-init_db()

@@ -3,10 +3,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class Config:
     # === AI ===
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
     GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+
+    # === NVIDIA Translation ===
+    NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "")
+    NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "nvidia/nemotron-3-super-120b-a12b")
+
+    # === Languages ===
+    SUPPORTED_LANGUAGES = ["ar", "en", "fr"]
+    DEFAULT_LANGUAGE = "ar"
 
     # === Scheduling ===
     FETCH_INTERVAL_MINUTES = int(os.getenv("FETCH_INTERVAL_MINUTES", "15"))
@@ -22,7 +31,14 @@ class Config:
 
     # === NewsAPI ===
     NEWSAPI_KEY = os.getenv("NEWSAPI_KEY", "")
-    NEWSAPI_CATEGORIES = ["business", "entertainment", "health", "science", "sports", "technology"]
+    NEWSAPI_CATEGORIES = [
+        "business",
+        "entertainment",
+        "health",
+        "science",
+        "sports",
+        "technology",
+    ]
     NEWSAPI_COUNTRIES = ["us", "gb"]
 
     # === TTS ===
@@ -38,8 +54,17 @@ class Config:
 
     # === Categories ===
     CATEGORIES = [
-        "تكنولوجيا", "رياضة", "صحة", "اقتصاد", "سياسة",
-        "فن وترفيه", "موضة وجمال", "علوم", "منوعات", "عاجل"
+        "تكنولوجيا",
+        "رياضة",
+        "صحة",
+        "اقتصاد",
+        "سياسة",
+        "فن وترفيه",
+        "موضة وجمال",
+        "علوم",
+        "منوعات",
+        "عاجل",
     ]
+
 
 config = Config()

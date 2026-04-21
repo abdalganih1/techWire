@@ -1376,6 +1376,52 @@ body {
 .empty-state p { font-size: 1rem; }
 
 /* ═══════════════════════════════════
+   LANGUAGE SWITCHER
+   ═══════════════════════════════════ */
+.lang-switcher {
+    display: flex;
+    gap: 2px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    padding: 2px;
+    overflow: hidden;
+}
+.lang-btn {
+    padding: 4px 10px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--font);
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+.lang-btn:hover { color: var(--text-primary); }
+.lang-btn.active {
+    background: var(--accent);
+    color: #fff;
+}
+
+/* LTR direction support */
+body.dir-ltr .topbar-right,
+body.dir-ltr .topbar-left {
+    flex-direction: row;
+}
+body.dir-ltr .search-icon {
+    right: auto;
+    left: 12px;
+}
+body.dir-ltr .search-box input {
+    padding: 10px 80px 10px 40px;
+}
+body.dir-ltr .search-clear { left: 40px; right: auto; }
+body.dir-ltr .search-ai { left: 4px; right: auto; }
+
+/* ═══════════════════════════════════
    HIDDEN UTILITY
    ═══════════════════════════════════ */
 .hidden { display: none !important; }

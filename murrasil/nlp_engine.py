@@ -8,6 +8,7 @@ import json
 import logging
 import asyncio
 import hashlib
+from typing import List
 
 import google.generativeai as genai
 from config import config
@@ -16,14 +17,15 @@ logger = logging.getLogger(__name__)
 
 genai.configure(api_key=config.GEMINI_API_KEY)
 _model = genai.GenerativeModel(
-    config.GEMINI_MODEL,
-    generation_config={"response_mime_type": "application/json"}
+    config.GEMINI_MODEL, generation_config={"response_mime_type": "application/json"}
 )
 
 CATEGORIES_LIST = ", ".join(config.CATEGORIES)
 
 
-async def process_single_article(title: str, content: str, source_lang: str = "en") -> dict | None:
+async def process_single_article(
+    title: str, content: str, source_lang: str = "en"
+) -> dict | None:
     """Process a single article: translate, summarize, classify, extract keywords."""
 
     if source_lang == "ar":
@@ -82,7 +84,7 @@ Classification rules:
         return None
 
 
-async def process_batch(articles: list[dict]) -> list[dict | None]:
+async def process_batch(articles: List[dict]) -> List[dict | None]:
     """
     Process a batch of up to 5 articles in one Gemini call.
     Each article: {"title": ..., "content": ..., "lang": "en"/"ar"}
@@ -92,7 +94,9 @@ async def process_batch(articles: list[dict]) -> list[dict | None]:
         # For small batches, process individually (more reliable)
         results = []
         for art in articles:
-            r = await process_single_article(art["title"], art["content"], art.get("lang", "en"))
+            r = await process_single_article(
+                art["title"], art["content"], art.get("lang", "en")
+            )
             results.append(r)
             await asyncio.sleep(0.5)
         return results
@@ -101,9 +105,9 @@ async def process_batch(articles: list[dict]) -> list[dict | None]:
     articles_text = ""
     for i, art in enumerate(articles):
         articles_text += f"""
---- Article {i+1} (lang: {art.get('lang','en')}) ---
-Title: {art['title']}
-Content: {art['content'][:800]}
+--- Article {i + 1} (lang: {art.get("lang", "en")}) ---
+Title: {art["title"]}
+Content: {art["content"][:800]}
 """
 
     prompt = f"""You are a professional news editor. Process these {len(articles)} articles.
@@ -151,13 +155,17 @@ Each object has: title_ar, summary_ar, category, keywords, is_breaking"""
         # Fallback: process individually
         results = []
         for art in articles:
-            r = await process_single_article(art["title"], art["content"], art.get("lang", "en"))
+            r = await process_single_article(
+                art["title"], art["content"], art.get("lang", "en")
+            )
             results.append(r)
             await asyncio.sleep(0.5)
         return results
 
 
-async def generate_article(title_ar: str, summary_ar: str, source_name: str) -> str | None:
+async def generate_article(
+    title_ar: str, summary_ar: str, source_name: str
+) -> str | None:
     """Generate a full article in Arabic from title and summary."""
     # Use a fresh model WITHOUT JSON response_mime_type
     model_text = genai.GenerativeModel(config.GEMINI_MODEL)
@@ -181,33 +189,38 @@ async def generate_article(title_ar: str, summary_ar: str, source_name: str) -> 
 
             # Check for safety blocks
             if not response.candidates:
-                logger.warning(f"Article generation blocked (no candidates): {title_ar[:50]}")
-                if hasattr(response, 'prompt_feedback'):
+                logger.warning(
+                    f"Article generation blocked (no candidates): {title_ar[:50]}"
+                )
+                if hasattr(response, "prompt_feedback"):
                     logger.warning(f"Prompt feedback: {response.prompt_feedback}")
                 return None
 
             candidate = response.candidates[0]
-            if candidate.finish_reason and candidate.finish_reason.name == 'SAFETY':
+            if candidate.finish_reason and candidate.finish_reason.name == "SAFETY":
                 logger.warning(f"Article blocked by safety filter: {title_ar[:50]}")
                 return None
 
-            text = response.text.strip() if response.text else ''
+            text = response.text.strip() if response.text else ""
             if not text:
-                logger.warning(f"Article generation returned empty text: {title_ar[:50]}")
+                logger.warning(
+                    f"Article generation returned empty text: {title_ar[:50]}"
+                )
                 if attempt == 0:
                     await asyncio.sleep(2)
                     continue
                 return None
 
-            logger.info(f"Article generated successfully ({len(text)} chars): {title_ar[:40]}")
+            logger.info(
+                f"Article generated successfully ({len(text)} chars): {title_ar[:40]}"
+            )
             return text
 
         except Exception as e:
-            logger.error(f"Error generating article (attempt {attempt+1}): {e}")
+            logger.error(f"Error generating article (attempt {attempt + 1}): {e}")
             if attempt == 0:
                 await asyncio.sleep(2)
                 continue
             return None
 
     return None
-

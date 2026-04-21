@@ -7,3 +7,5 @@ python-dotenv
 aiohttp
 beautifulsoup4
 scikit-learn
+openai
+pydantic
